@@ -1,4 +1,5 @@
 import { hasChanged, isObject } from '@mini-vue/shared'
+import { trackEffects, triggerEffects } from './effect'
 import { reactive } from './reactive'
 
 export function ref(value?: unknown) {
@@ -19,21 +20,31 @@ class RefImpl {
 	}
 
 	get value() {
+		trackRefValue(this)
 		return this._value
 	}
 
 	set value(newVal) {
 		if (hasChanged) {
 			this._value = convert(newVal)
+			triggerRefValue(this)
 		}
 	}
 }
 
-export function isRef(r) {
+function trackRefValue(ref) {
+	trackEffects(ref.dep || (ref.dep = new Set()))
+}
+
+function triggerRefValue(ref) {
+	triggerEffects(ref.dep || (ref.dep = new Set()))
+}
+
+export function isRef(r: any) {
 	return !!(r && r.__v_isRef === true)
 }
 
-function createRef(rawValue) {
+function createRef(rawValue: any) {
 	if (isRef(rawValue)) return rawValue
 
 	return new RefImpl(rawValue)

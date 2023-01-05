@@ -59,6 +59,7 @@ export function track(target, type, key) {
 }
 
 export function trackEffects(dep) {
+	if (activeEffect === undefined) return
 	dep.add(activeEffect)
 	activeEffect.deps.push(dep)
 	console.log(dep)
@@ -100,7 +101,7 @@ export function trgger(
 	triggerEffects(new Set(effects))
 }
 
-function triggerEffects(dep) {
+export function triggerEffects(dep) {
 	for (const effect of dep) {
 		effect.run()
 	}

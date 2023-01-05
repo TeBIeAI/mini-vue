@@ -60,6 +60,8 @@ function track(target, type, key) {
     trackEffects(dep);
 }
 function trackEffects(dep) {
+    if (activeEffect === undefined)
+        return;
     dep.add(activeEffect);
     activeEffect.deps.push(dep);
     console.log(dep);
@@ -183,13 +185,21 @@ class RefImpl {
         this._value = convert(value);
     }
     get value() {
+        trackRefValue(this);
         return this._value;
     }
     set value(newVal) {
         if (hasChanged) {
             this._value = convert(newVal);
+            triggerRefValue(this);
         }
     }
+}
+function trackRefValue(ref) {
+    trackEffects(ref.dep || (ref.dep = new Set()));
+}
+function triggerRefValue(ref) {
+    triggerEffects(ref.dep || (ref.dep = new Set()));
 }
 function isRef(r) {
     return !!(r && r.__v_isRef === true);
