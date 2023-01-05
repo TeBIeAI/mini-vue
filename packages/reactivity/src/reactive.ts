@@ -28,7 +28,7 @@ function createReactiveObject(target, isReadOnly, baseHandlers, proxyMap) {
 		return target
 	}
 	const existingProxy = proxyMap.get(target)
-	if (existingProxy) return target
+	if (existingProxy) return existingProxy
 
 	const proxy = new Proxy(target, baseHandlers)
 

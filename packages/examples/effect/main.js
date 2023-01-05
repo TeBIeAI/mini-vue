@@ -1,21 +1,15 @@
 import { effect, reactive } from '../../vue/dist/mini-vue.esm-bundler.js'
 
-const obj = reactive({
-	address: {
-		name: 'hanchao'
+const obj1 = reactive({
+	name: {
+		sex: '男'
 	}
 })
-
-const obj1 = reactive({
-	sex: '女'
-})
-
 const _effect = effect(() => {
-	debugger
-	console.log(obj.address)
-	console.log(obj1.sex)
+	console.log(obj1.name.sex)
 })
-
+// console.log(obj1.name.sex)
+// console.log(obj1)
 setTimeout(() => {
-	obj1.sex = '男'
+	obj1.name.sex = '女'
 }, 1000)

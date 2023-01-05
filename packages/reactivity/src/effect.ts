@@ -1,4 +1,5 @@
 export let activeEffect: ReactiveEffect
+let shouldTrack = false
 
 export class ReactiveEffect {
 	active = true
@@ -7,14 +8,18 @@ export class ReactiveEffect {
 
 	run() {
 		if (!this.active) {
+			// 此处执行fn  但不会进行依赖收集
 			return this.fn()
 		}
 		try {
 			activeEffect = this
-
+			shouldTrack = true
+			// 执行用户传入的fn 开始对fn内部使用的响应对象进行依赖收集
 			return this.fn()
 		} finally {
+			// 执行完毕后  重置
 			activeEffect = undefined
+			shouldTrack = false
 		}
 	}
 
@@ -39,30 +44,26 @@ export function effect(fn: () => {}, options) {
 const targetMap = new WeakMap()
 
 export function track(target, type, key) {
-	if (activeEffect === undefined) {
-		// 目前不需要收集依赖 没有effect
-		return
+	if (shouldTrack && activeEffect) {
+		let depsMap = targetMap.get(target)
+
+		if (!depsMap) {
+			targetMap.set(target, (depsMap = new Map()))
+		}
+
+		let dep = depsMap.get(key)
+		if (!dep) {
+			depsMap.set(key, (dep = new Set()))
+		}
+
+		trackEffects(dep)
 	}
-
-	let depsMap = targetMap.get(target)
-
-	if (!depsMap) {
-		targetMap.set(target, (depsMap = new Map()))
-	}
-
-	let dep = depsMap.get(key)
-	if (!dep) {
-		depsMap.set(key, (dep = new Set()))
-	}
-
-	trackEffects(dep)
 }
 
 export function trackEffects(dep) {
 	if (activeEffect === undefined) return
 	dep.add(activeEffect)
 	activeEffect.deps.push(dep)
-	console.log(dep)
 }
 
 export function trgger(

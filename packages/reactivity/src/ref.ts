@@ -32,11 +32,11 @@ class RefImpl {
 	}
 }
 
-function trackRefValue(ref) {
+export function trackRefValue(ref) {
 	trackEffects(ref.dep || (ref.dep = new Set()))
 }
 
-function triggerRefValue(ref) {
+export function triggerRefValue(ref) {
 	triggerEffects(ref.dep || (ref.dep = new Set()))
 }
 

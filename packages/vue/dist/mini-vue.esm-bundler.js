@@ -7,6 +7,7 @@ const hasOwn = (target, key) => {
 };
 
 let activeEffect;
+let shouldTrack = false;
 class ReactiveEffect {
     constructor(fn, scheduler = null) {
         this.fn = fn;
@@ -16,14 +17,19 @@ class ReactiveEffect {
     }
     run() {
         if (!this.active) {
+            // 此处执行fn  但不会进行依赖收集
             return this.fn();
         }
         try {
             activeEffect = this;
+            shouldTrack = true;
+            // 执行用户传入的fn 开始对fn内部使用的响应对象进行依赖收集
             return this.fn();
         }
         finally {
+            // 执行完毕后  重置
             activeEffect = undefined;
+            shouldTrack = false;
         }
     }
     stop() {
@@ -41,26 +47,23 @@ function effect(fn, options) {
 }
 const targetMap = new WeakMap();
 function track(target, type, key) {
-    if (activeEffect === undefined) {
-        // 目前不需要收集依赖 没有effect
-        return;
+    if (shouldTrack && activeEffect) {
+        let depsMap = targetMap.get(target);
+        if (!depsMap) {
+            targetMap.set(target, (depsMap = new Map()));
+        }
+        let dep = depsMap.get(key);
+        if (!dep) {
+            depsMap.set(key, (dep = new Set()));
+        }
+        trackEffects(dep);
     }
-    let depsMap = targetMap.get(target);
-    if (!depsMap) {
-        targetMap.set(target, (depsMap = new Map()));
-    }
-    let dep = depsMap.get(key);
-    if (!dep) {
-        depsMap.set(key, (dep = new Set()));
-    }
-    trackEffects(dep);
 }
 function trackEffects(dep) {
     if (activeEffect === undefined)
         return;
     dep.add(activeEffect);
     activeEffect.deps.push(dep);
-    console.log(dep);
 }
 function trgger(target, type, key, newValue, oldValue) {
     // 查看当前对象是否被收集过   也就是当前对象是否在effect中使用过
@@ -87,11 +90,9 @@ function triggerEffects(dep) {
 
 const get = createGetter();
 const readonlyGet = createGetter(true);
-const set = createSetter();
 function createGetter(isReadOnly = false, shallow = false) {
     return function get(target, key) {
         const res = Reflect.get(target, key);
-        isReadonly(res);
         if (!isReadOnly) {
             // 此处可以开始收集依赖
             track(target, 'add', key);
@@ -108,11 +109,12 @@ function createGetter(isReadOnly = false, shallow = false) {
         return res;
     };
 }
-function createSetter(isReadOnly = false, shallow = false) {
+const set = createSetter();
+function createSetter(shallow = false) {
     return function set(target, key, value) {
-        let oldValue = target[key];
+        target[key];
         // 判断 oldValue 是否为只读属性 只读属性不能修改  reactive({name: {name1: {name2: 2}}})   name1 有可能被readonly 包裹
-        isReadonly(oldValue);
+        // isReadonly(oldValue)
         // 判断是新增 还是修改
         const hadKey = hasOwn(target, key);
         const result = Reflect.set(target, key, value);
@@ -148,7 +150,7 @@ function createReactiveObject(target, isReadOnly, baseHandlers, proxyMap) {
     }
     const existingProxy = proxyMap.get(target);
     if (existingProxy)
-        return target;
+        return existingProxy;
     const proxy = new Proxy(target, baseHandlers);
     proxyMap.set(target, proxy);
     return proxy;
@@ -159,9 +161,6 @@ function reactive(target) {
 }
 function readonly(target) {
     return createReactiveObject(target, true, readonlyHandlers, readonlyMap);
-}
-function isReadonly(value) {
-    return !!(value && value["__v_isReadonly" /* ReactiveFlags.IS_READONLY */]);
 }
 
 const hasChanged = (value, oldValue) => {
@@ -206,5 +205,28 @@ function createRef(rawValue) {
     return new RefImpl(rawValue);
 }
 
-export { effect, reactive, readonly, ref, track };
+class ComputedRefImpl {
+    constructor(getter) {
+        this.dep = [];
+        this.__v_isRef = true;
+        this._dirty = true;
+        this.effect = new ReactiveEffect(getter);
+        this.effect.active = true;
+    }
+    get value() {
+        trackRefValue(this);
+        const self = this;
+        if (self._dirty) {
+            self._dirty = false;
+            self._value = self.effect.run();
+        }
+        return self._value;
+    }
+}
+function computed(getter) {
+    const cRef = new ComputedRefImpl(getter);
+    return cRef;
+}
+
+export { computed, effect, reactive, readonly, ref, track };
 //# sourceMappingURL=mini-vue.esm-bundler.js.map
