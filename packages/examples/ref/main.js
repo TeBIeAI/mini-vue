@@ -9,5 +9,5 @@ const obj = ref({
 	name: '你好'
 })
 // obj.value = '111'
-
+1
 console.log(obj)
