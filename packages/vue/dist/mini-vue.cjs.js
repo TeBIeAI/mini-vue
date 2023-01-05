@@ -10,15 +10,80 @@ const hasOwn = (target, key) => {
     return hasOwnProperty.call(target, key);
 };
 
+let activeEffect;
+class ReactiveEffect {
+    constructor(fn, scheduler = null) {
+        this.fn = fn;
+        this.scheduler = scheduler;
+        this.active = true;
+        this.deps = [];
+    }
+    run() {
+        if (!this.active) {
+            return this.fn();
+        }
+        try {
+            activeEffect = this;
+            return this.fn();
+        }
+        finally {
+            activeEffect = undefined;
+        }
+    }
+    stop() {
+        // if(this.active) {
+        //   clear
+        // }
+    }
+}
+function effect(fn, options) {
+    const _effect = new ReactiveEffect(fn);
+    _effect.run();
+    const runner = _effect.run.bind(_effect);
+    runner.effect = _effect;
+    return runner;
+}
 const targetMap = new WeakMap();
 function track(target, type, key) {
+    if (activeEffect === undefined) {
+        // 目前不需要收集依赖 没有effect
+        return;
+    }
     let depsMap = targetMap.get(target);
     if (!depsMap) {
         targetMap.set(target, (depsMap = new Map()));
     }
     let dep = depsMap.get(key);
     if (!dep) {
-        depsMap.set(key, (dep = new Map()));
+        depsMap.set(key, (dep = new Set()));
+    }
+    trackEffects(dep);
+}
+function trackEffects(dep) {
+    dep.add(activeEffect);
+    activeEffect.deps.push(dep);
+    console.log(dep);
+}
+function trgger(target, type, key, newValue, oldValue) {
+    // 查看当前对象是否被收集过   也就是当前对象是否在effect中使用过
+    const depsMap = targetMap.get(target);
+    if (!depsMap)
+        return;
+    let deps = [];
+    if (key !== void 0) {
+        deps.push(depsMap.get(key));
+    }
+    const effects = [];
+    for (const dep of deps) {
+        if (dep) {
+            effects.push(...dep);
+        }
+    }
+    triggerEffects(new Set(effects));
+}
+function triggerEffects(dep) {
+    for (const effect of dep) {
+        effect.run();
     }
 }
 
@@ -51,8 +116,16 @@ function createSetter(isReadOnly = false, shallow = false) {
         // 判断 oldValue 是否为只读属性 只读属性不能修改  reactive({name: {name1: {name2: 2}}})   name1 有可能被readonly 包裹
         isReadonly(oldValue);
         // 判断是新增 还是修改
-        hasOwn(target, key);
+        const hadKey = hasOwn(target, key);
         const result = Reflect.set(target, key, value);
+        if (!hadKey) {
+            // 新增
+            trgger(target, 'add', key);
+        }
+        else {
+            // 修改
+            trgger(target, 'set', key);
+        }
         return result;
     };
 }
@@ -93,7 +166,43 @@ function isReadonly(value) {
     return !!(value && value["__v_isReadonly" /* ReactiveFlags.IS_READONLY */]);
 }
 
+const hasChanged = (value, oldValue) => {
+    return !Object.is(value, oldValue);
+};
+
+function ref(value) {
+    return createRef(value);
+}
+function convert(value) {
+    return isObject(value) ? reactive(value) : value;
+}
+class RefImpl {
+    constructor(value) {
+        this.dep = undefined;
+        this.__v_isRef = true;
+        this._value = convert(value);
+    }
+    get value() {
+        return this._value;
+    }
+    set value(newVal) {
+        if (hasChanged) {
+            this._value = convert(newVal);
+        }
+    }
+}
+function isRef(r) {
+    return !!(r && r.__v_isRef === true);
+}
+function createRef(rawValue) {
+    if (isRef(rawValue))
+        return rawValue;
+    return new RefImpl(rawValue);
+}
+
+exports.effect = effect;
 exports.reactive = reactive;
 exports.readonly = readonly;
+exports.ref = ref;
 exports.track = track;
 //# sourceMappingURL=mini-vue.cjs.js.map

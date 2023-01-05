@@ -1,5 +1,5 @@
 import { hasOwn, isObject } from '@vue/shared'
-import { track } from './effect'
+import { track, trgger } from './effect'
 import { isReadonly, reactive, readonly } from './reactive'
 
 const get = createGetter()
@@ -42,11 +42,12 @@ function createSetter(isReadOnly = false, shallow = false) {
 		const hadKey = hasOwn(target, key)
 
 		const result = Reflect.set(target, key, value)
-
 		if (!hadKey) {
 			// 新增
+			trgger(target, 'add', key, value)
 		} else {
 			// 修改
+			trgger(target, 'set', key, value, oldValue)
 		}
 
 		return result

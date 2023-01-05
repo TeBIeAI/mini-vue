@@ -1,3 +1,5 @@
 export { reactive, readonly } from './reactive'
 
-export { track } from './effect'
+export { track, effect } from './effect'
+
+export { ref } from './ref'
