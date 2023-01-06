@@ -11,7 +11,6 @@ function isSameVNodeType(n1, n2) {
 
 export function baseCreateRenderer(options) {
 	const processComponent = (n1, n2, container, anchor) => {
-		console.log(n1, n2)
 		if (n1 === null) {
 			// 走这里  是第一次渲染
 			mountComponent(n2, container, anchor)
@@ -39,17 +38,17 @@ export function baseCreateRenderer(options) {
 				let vnodeHook: undefined
 
 				const { bm, m } = instance
+				const proxyToUse = instance.proxy
 
 				if (bm) {
 					// 处理beforMounted
 				}
 
-				instance.render()
+				instance.render.call(proxyToUse, proxyToUse)
 
 				if (m) {
 					// 处理mounted   此时组件挂载成功
 				}
-				debugger
 			} else {
 				// 更新组件
 			}

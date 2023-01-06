@@ -1,4 +1,5 @@
 import { EMPTY_OBJ, isFunction, isObject, ShapeFlags } from '@vue/shared'
+import { PublicInstanceProxyHandlers } from './componentPublicInstance'
 
 let uid = 0
 
@@ -56,8 +57,8 @@ export function setupComponent(instance) {
 
 function setupStatefulComponent(instance) {
 	const Component = instance.type
-
-	// instance.proxy = new Proxy(instance.ctx)
+	debugger
+	instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers as any)
 
 	// 调用setup
 	const { setup } = Component
@@ -87,7 +88,6 @@ function handleSetupResult(instance, setupResult) {
 }
 
 function finishComponentSetup(instance) {
-	console.log(instance)
 	const Component = instance.type
 	if (!instance.render) {
 		instance.render = Component.render

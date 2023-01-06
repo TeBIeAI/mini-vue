@@ -16,6 +16,26 @@ const hasOwn = (target, key) => {
     return hasOwnProperty.call(target, key);
 };
 
+const PublicInstanceProxyHandlers = {
+    get({ _: instance }, key) {
+        const { setupState, props } = instance;
+        if (key[0] !== '$') {
+            if (hasOwn(setupState, key)) {
+                return setupState[key];
+            }
+            else if (hasOwn(props, key)) {
+                return props[key];
+            }
+        }
+    },
+    set({ _: instance }, key, value) {
+        const { setupState } = instance;
+        if (hasOwn(setupState, key)) {
+            setupState[key] = value;
+        }
+    }
+};
+
 let uid = 0;
 let currentInstance = null;
 const getCurrentInstance = () => currentInstance;
@@ -58,7 +78,8 @@ function setupComponent(instance) {
 }
 function setupStatefulComponent(instance) {
     const Component = instance.type;
-    // instance.proxy = new Proxy(instance.ctx)
+    debugger;
+    instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers);
     // 调用setup
     const { setup } = Component;
     if (setup) {
@@ -80,7 +101,6 @@ function handleSetupResult(instance, setupResult) {
     finishComponentSetup(instance);
 }
 function finishComponentSetup(instance) {
-    console.log(instance);
     const Component = instance.type;
     if (!instance.render) {
         instance.render = Component.render;
@@ -243,7 +263,6 @@ function isSameVNodeType(n1, n2) {
 }
 function baseCreateRenderer(options) {
     const processComponent = (n1, n2, container, anchor) => {
-        console.log(n1, n2);
         if (n1 === null) {
             // 走这里  是第一次渲染
             mountComponent(n2);
@@ -262,8 +281,8 @@ function baseCreateRenderer(options) {
     const setupRenderEffect = (instance, container) => {
         const componentUpdateFn = () => {
             if (!instance.isMounted) {
-                instance.render();
-                debugger;
+                const proxyToUse = instance.proxy;
+                instance.render.call(proxyToUse, proxyToUse);
             }
         };
         const effect = new ReactiveEffect(componentUpdateFn);
@@ -310,6 +329,19 @@ function baseCreateRenderer(options) {
 function createRenderer(options) {
     return baseCreateRenderer();
 }
+
+const createHook = lifecycle => {
+    // hook 的 target =>  当前实例
+    return (hook, target = currentInstance) => {
+        debugger;
+        injectHook(lifecycle, (...args) => hook(...args), target);
+    };
+};
+function injectHook(type, hook, target = currentInstance) {
+    target[type] || (target[type] = []);
+    debugger;
+}
+const onMounted = createHook("m" /* LifecycleHooks.MOUNTED */);
 
 // 这个文件主要用于操作dom  我直接将源文件复制过来了
 const doc = (typeof document !== 'undefined' ? document : null);
@@ -605,6 +637,7 @@ exports.createApp = createApp;
 exports.createRenderer = createRenderer;
 exports.effect = effect;
 exports.getCurrentInstance = getCurrentInstance;
+exports.onMounted = onMounted;
 exports.reactive = reactive;
 exports.readonly = readonly;
 exports.ref = ref;

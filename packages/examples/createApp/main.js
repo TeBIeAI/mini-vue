@@ -2,12 +2,17 @@ import {
 	createApp,
 	getCurrentInstance,
 	reactive,
-	effect
+	effect,
+	onMounted
 } from '../../vue/dist/mini-vue.esm-bundler.js'
 
 const App = {
 	setup(props, ctx) {
 		const instance = getCurrentInstance()
+
+		onMounted(() => {
+			debugger
+		})
 
 		console.log('instance', instance)
 
@@ -28,7 +33,8 @@ const App = {
 		const a = {
 			name: '你好'
 		}
-		return () => {
+		return state => {
+			state.name
 			debugger
 		}
 	}
