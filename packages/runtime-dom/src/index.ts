@@ -14,5 +14,21 @@ function ensureRenderer() {
 export const createApp = (...args) => {
 	const app = ensureRenderer().createApp(...args)
 
+	const { mount } = app
+
+	app.mount = function (container) {
+		if (!container) return
+
+		container = nodeOps.querySelector(container)
+		container.innerHTML = ''
+
+		const proxy = mount(container)
+
+		return proxy
+	}
+
 	return app
 }
+
+export * from '@mini-vue/runtime-core'
+export * from '@mini-vue/reactivity'
