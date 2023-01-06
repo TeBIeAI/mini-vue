@@ -5,7 +5,7 @@ import commonjs from '@rollup/plugin-commonjs'
 import replace from '@rollup/plugin-replace'
 
 export default {
-	input: './packages/reactivity/index.js',
+	input: './packages/runtime-dom/src/index.ts',
 	plugins: [
 		replace({
 			'process.env.NODE_ENV': JSON.stringify('development'),

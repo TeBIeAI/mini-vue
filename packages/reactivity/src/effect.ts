@@ -1,9 +1,12 @@
+import { ComputedRefImpl } from './computed'
+
 export let activeEffect: ReactiveEffect
 let shouldTrack = false
 
 export class ReactiveEffect {
 	active = true
 	deps: any[] = []
+	computed?: ComputedRefImpl
 	constructor(public fn, public scheduler = null) {}
 
 	run() {

@@ -1,7 +1,7 @@
 import { ReactiveEffect } from './effect'
 import { trackRefValue } from './ref'
 
-class ComputedRefImpl {
+export class ComputedRefImpl {
 	public dep = []
 
 	private _value
@@ -14,6 +14,7 @@ class ComputedRefImpl {
 
 	constructor(getter) {
 		this.effect = new ReactiveEffect(getter)
+		this.effect.computed = this
 		this.effect.active = true
 	}
 
