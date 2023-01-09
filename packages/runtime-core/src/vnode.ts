@@ -28,6 +28,7 @@ export function createVNode(type, props = null, children = null) {
 }
 
 function normalizeChildren(vnode, children) {
+	debugger
 	let type = 0
 	if (children === null) {
 	} else if (isArray(children)) {

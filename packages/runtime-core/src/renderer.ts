@@ -1,6 +1,7 @@
 import { ShapeFlags } from '@vue/shared'
 import { ReactiveEffect } from 'packages/reactivity/src/effect'
 import { createAppAPI } from './apiCreateApp'
+import { renderComponentRoot } from './componentRenderUtils'
 import { createComponentInstance, setupComponent } from './components'
 
 export const Text = Symbol('text')
@@ -10,6 +11,21 @@ function isSameVNodeType(n1, n2) {
 }
 
 export function baseCreateRenderer(options) {
+	const {
+		insert: hostInsert,
+		remove: hostRemove,
+		patchProp: hostPatchProp,
+		createElement: hostCreateElement,
+		createText: hostCreateText,
+		createComment: hostCreateComment,
+		setText: hostSetText,
+		setElementText: hostSetElementText,
+		parentNode: hostParentNode,
+		nextSibling: hostNextSibling,
+		setScopeId: hostSetScopeId = NOOP,
+		insertStaticContent: hostInsertStaticContent
+	} = options
+
 	const processComponent = (n1, n2, container, anchor) => {
 		if (n1 === null) {
 			// 走这里  是第一次渲染
@@ -27,7 +43,6 @@ export function baseCreateRenderer(options) {
 
 		// 配置组件
 		setupComponent(instance)
-
 		// 为render创建effect
 		setupRenderEffect(instance, container)
 	}
@@ -43,11 +58,19 @@ export function baseCreateRenderer(options) {
 				if (bm) {
 					// 处理beforMounted
 				}
+				// instance.render.call(proxyToUse, proxyToUse)
+				const subTree = (instance.subTree = renderComponentRoot(instance))
 
-				instance.render.call(proxyToUse, proxyToUse)
+				patch(null, subTree, container)
+
+				return false
 
 				if (m) {
 					// 处理mounted   此时组件挂载成功
+					// 此处做了简化，直接调用   没有考虑instance的问题
+					m.forEach(fn => {
+						fn()
+					})
 				}
 			} else {
 				// 更新组件
@@ -60,6 +83,20 @@ export function baseCreateRenderer(options) {
 
 		update()
 	}
+
+	// 处理元素
+	const processElement = (n1, n2, container, anchore) => {
+		debugger
+		if (n1 === null) {
+			mountElement(n2, container, anchore)
+		}
+	}
+
+	const mountElement = (vnode, container, anchor) => {
+		let el = (vnode.el = hostCreateElement(vnode.type))
+		debugger
+	}
+	// 处理元素
 
 	/**
 	 *
@@ -83,7 +120,7 @@ export function baseCreateRenderer(options) {
 
 			default:
 				if (shapeFlag & ShapeFlags.ELEMENT) {
-					debugger
+					processElement(n1, n2, container, anchor)
 				} else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
 					processComponent(n1, n2, container, anchor)
 				}

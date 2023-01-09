@@ -57,7 +57,6 @@ export function setupComponent(instance) {
 
 function setupStatefulComponent(instance) {
 	const Component = instance.type
-	debugger
 	instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers as any)
 
 	// 调用setup

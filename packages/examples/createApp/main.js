@@ -3,7 +3,8 @@ import {
 	getCurrentInstance,
 	reactive,
 	effect,
-	onMounted
+	onMounted,
+	createVNode
 } from '../../vue/dist/mini-vue.esm-bundler.js'
 
 const App = {
@@ -11,7 +12,7 @@ const App = {
 		const instance = getCurrentInstance()
 
 		onMounted(() => {
-			debugger
+			console.log(instance)
 		})
 
 		console.log('instance', instance)
@@ -34,8 +35,7 @@ const App = {
 			name: '你好'
 		}
 		return state => {
-			state.name
-			debugger
+			return createVNode('p', '你好')
 		}
 	}
 }

@@ -78,7 +78,6 @@ function setupComponent(instance) {
 }
 function setupStatefulComponent(instance) {
     const Component = instance.type;
-    debugger;
     instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers);
     // 调用setup
     const { setup } = Component;
@@ -218,6 +217,7 @@ function createVNode(type, props = null, children = null) {
     return vnode;
 }
 function normalizeChildren(vnode, children) {
+    debugger;
     let type = 0;
     if (children === null) ;
     else if (isArray(children)) {
@@ -257,11 +257,18 @@ function createAppAPI(render) {
     };
 }
 
+function renderComponentRoot(instance) {
+    const { type: Component, vnode, proxy, withProxy, props, slots, attrs, emit, render, renderCache, data, setupState, ctx, inheritAttrs } = instance;
+    let result = render.call(proxy, proxy);
+    return result;
+}
+
 const Text = Symbol('text');
 function isSameVNodeType(n1, n2) {
     return n1.type === n2.type;
 }
 function baseCreateRenderer(options) {
+    const { insert: hostInsert, remove: hostRemove, patchProp: hostPatchProp, createElement: hostCreateElement, createText: hostCreateText, createComment: hostCreateComment, setText: hostSetText, setElementText: hostSetElementText, parentNode: hostParentNode, nextSibling: hostNextSibling, setScopeId: hostSetScopeId = NOOP, insertStaticContent: hostInsertStaticContent } = options;
     const processComponent = (n1, n2, container, anchor) => {
         if (n1 === null) {
             // 走这里  是第一次渲染
@@ -281,14 +288,29 @@ function baseCreateRenderer(options) {
     const setupRenderEffect = (instance, container) => {
         const componentUpdateFn = () => {
             if (!instance.isMounted) {
-                const proxyToUse = instance.proxy;
-                instance.render.call(proxyToUse, proxyToUse);
+                instance.proxy;
+                // instance.render.call(proxyToUse, proxyToUse)
+                const subTree = (instance.subTree = renderComponentRoot(instance));
+                patch(null, subTree);
+                return false;
             }
         };
         const effect = new ReactiveEffect(componentUpdateFn);
         const update = (instance.update = () => effect.run());
         update();
     };
+    // 处理元素
+    const processElement = (n1, n2, container, anchore) => {
+        debugger;
+        if (n1 === null) {
+            mountElement(n2);
+        }
+    };
+    const mountElement = (vnode, container, anchor) => {
+        (vnode.el = hostCreateElement(vnode.type));
+        debugger;
+    };
+    // 处理元素
     /**
      *
      * @param n1 父组件
@@ -307,7 +329,7 @@ function baseCreateRenderer(options) {
                 break;
             default:
                 if (shapeFlag & 1 /* ShapeFlags.ELEMENT */) {
-                    debugger;
+                    processElement(n1, n2);
                 }
                 else if (shapeFlag & 4 /* ShapeFlags.STATEFUL_COMPONENT */) {
                     processComponent(n1, n2);
@@ -327,19 +349,20 @@ function baseCreateRenderer(options) {
     };
 }
 function createRenderer(options) {
-    return baseCreateRenderer();
+    return baseCreateRenderer(options);
 }
 
 const createHook = lifecycle => {
     // hook 的 target =>  当前实例
     return (hook, target = currentInstance) => {
-        debugger;
         injectHook(lifecycle, (...args) => hook(...args), target);
     };
 };
 function injectHook(type, hook, target = currentInstance) {
-    target[type] || (target[type] = []);
-    debugger;
+    const hooks = target[type] || (target[type] = []);
+    // 注入钩子
+    hooks.push(hook);
+    return hook;
 }
 const onMounted = createHook("m" /* LifecycleHooks.MOUNTED */);
 
@@ -612,10 +635,10 @@ function computed(getter) {
 }
 
 // 创建dom操作相关属性
-Object.assign(nodeOps, { patchProp });
+const rendererOptions = Object.assign(nodeOps, { patchProp });
 let renderer;
 function ensureRenderer() {
-    return renderer || (renderer = createRenderer());
+    return renderer || (renderer = createRenderer(rendererOptions));
 }
 const createApp = (...args) => {
     const app = ensureRenderer().createApp(...args);
@@ -635,6 +658,7 @@ exports.baseCreateRenderer = baseCreateRenderer;
 exports.computed = computed;
 exports.createApp = createApp;
 exports.createRenderer = createRenderer;
+exports.createVNode = createVNode;
 exports.effect = effect;
 exports.getCurrentInstance = getCurrentInstance;
 exports.onMounted = onMounted;
